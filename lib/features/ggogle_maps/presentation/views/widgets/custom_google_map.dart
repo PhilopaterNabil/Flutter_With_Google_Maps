@@ -2,6 +2,7 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_with_google_maps/core/utils/location_service.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 
@@ -14,12 +15,13 @@ class CustomGoogleMap extends StatefulWidget {
 
 class _CustomGoogleMapState extends State<CustomGoogleMap> {
   late CameraPosition initialCameraPostion;
-  late Location location;
+
+  late LocationService locationService;
 
   @override
   void initState() {
     initialCameraPostion = const CameraPosition(zoom: 10, target: LatLng(31, 30));
-    location = Location();
+    locationService = LocationService();
     updateMyLocation();
     super.initState();
   }
@@ -30,6 +32,7 @@ class _CustomGoogleMapState extends State<CustomGoogleMap> {
     super.dispose();
   }
 
+  bool isFirstCall = true;
   GoogleMapController? googleMapController;
   Set<Marker> markers = {};
 
@@ -56,60 +59,48 @@ class _CustomGoogleMapState extends State<CustomGoogleMap> {
     }
   }
 
-  Future<void> checkAndRequestLocationServices() async {
-    bool isServiceEnabled = await location.serviceEnabled();
-    if (!isServiceEnabled) {
-      isServiceEnabled = await location.requestService();
-      if (!isServiceEnabled) {
-        // TODO: show error bar
-      }
+  void updateMyLocation() async {
+    await locationService.checkAndRequestLocationServices();
+    var hasPermissionStatus = await locationService.checkAndRequestLocationPermission();
+    if (hasPermissionStatus) {
+      locationService.getRealTimeLocationData((locationData) {
+        setMyLocatinMarker(locationData);
+        updateMyCamera(locationData);
+      });
+    } else {
+      // TODO: show error bar
     }
   }
 
-  Future<bool> checkAndRequestLocationPermission() async {
-    var permissionStatus = await location.hasPermission();
-
-    if (permissionStatus == PermissionStatus.deniedForever) {
-      return false;
-    }
-
-    if (permissionStatus == PermissionStatus.denied) {
-      permissionStatus = await location.requestPermission();
-      if (permissionStatus != PermissionStatus.granted) {
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  void getLocationData() async {
-    location.changeSettings(distanceFilter: 2);
-    location.onLocationChanged.listen((locationData) {
+  void updateMyCamera(LocationData locationData) {
+    // var cameraPosition = CameraPosition(
+    //   target: LatLng(locationData.latitude!, locationData.longitude!),
+    //   zoom: 13,
+    // );
+    // googleMapController?.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
+    if (isFirstCall) {
       var cameraPosition = CameraPosition(
         target: LatLng(locationData.latitude!, locationData.longitude!),
         zoom: 13,
       );
-      var myLocationMarker = Marker(
-        markerId: const MarkerId('myLocation'),
-        position: LatLng(locationData.latitude!, locationData.longitude!),
-        infoWindow: const InfoWindow(title: 'My Location'),
-      );
-      setState(() {
-        markers.add(myLocationMarker);
-      });
       googleMapController?.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
-    });
+
+      isFirstCall = false;
+    } else {
+      googleMapController?.animateCamera(
+          CameraUpdate.newLatLng(LatLng(locationData.latitude!, locationData.longitude!)));
+    }
   }
 
-  void updateMyLocation() async {
-    await checkAndRequestLocationServices();
-    var hasPermissionStatus = await checkAndRequestLocationPermission();
-    if (hasPermissionStatus) {
-      getLocationData();
-    } else {
-      // TODO: show error bar
-    }
+  void setMyLocatinMarker(LocationData locationData) {
+    var myLocationMarker = Marker(
+      markerId: const MarkerId('myLocation'),
+      position: LatLng(locationData.latitude!, locationData.longitude!),
+      infoWindow: const InfoWindow(title: 'My Location'),
+    );
+    setState(() {
+      markers.add(myLocationMarker);
+    });
   }
 }
 
