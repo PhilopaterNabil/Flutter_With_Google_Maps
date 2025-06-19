@@ -18,10 +18,7 @@ class _CustomGoogleMapState extends State<CustomGoogleMap> {
 
   @override
   void initState() {
-    initialCameraPostion = const CameraPosition(
-      target: LatLng(31, 30),
-      zoom: 10,
-    );
+    initialCameraPostion = const CameraPosition(zoom: 10, target: LatLng(31, 30));
     location = Location();
     updateMyLocation();
     super.initState();
@@ -29,11 +26,11 @@ class _CustomGoogleMapState extends State<CustomGoogleMap> {
 
   @override
   void dispose() {
-    googleMapController.dispose();
+    googleMapController?.dispose();
     super.dispose();
   }
 
-  late GoogleMapController googleMapController;
+  GoogleMapController? googleMapController;
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +48,7 @@ class _CustomGoogleMapState extends State<CustomGoogleMap> {
     DefaultAssetBundle.of(context).loadString('assets/map_styles/night_map_style.json');
     try {
       final nightMapStyle = await rootBundle.loadString('assets/map_styles/night_map_style.json');
-      googleMapController.setMapStyle(nightMapStyle);
+      googleMapController!.setMapStyle(nightMapStyle);
     } catch (e) {
       log(e.toString());
     }
@@ -85,7 +82,13 @@ class _CustomGoogleMapState extends State<CustomGoogleMap> {
   }
 
   void getLocationData() async {
-    location.onLocationChanged.listen((locationData) {});
+    location.onLocationChanged.listen((locationData) {
+      var cameraPosition = CameraPosition(
+        target: LatLng(locationData.latitude!, locationData.longitude!),
+        zoom: 10,
+      );
+      googleMapController?.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
+    });
   }
 
   void updateMyLocation() async {
