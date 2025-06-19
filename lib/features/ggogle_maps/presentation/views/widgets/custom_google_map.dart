@@ -84,10 +84,11 @@ class _CustomGoogleMapState extends State<CustomGoogleMap> {
   }
 
   void getLocationData() async {
+    location.changeSettings(distanceFilter: 2);
     location.onLocationChanged.listen((locationData) {
       var cameraPosition = CameraPosition(
         target: LatLng(locationData.latitude!, locationData.longitude!),
-        zoom: 10,
+        zoom: 13,
       );
       var myLocationMarker = Marker(
         markerId: const MarkerId('myLocation'),
