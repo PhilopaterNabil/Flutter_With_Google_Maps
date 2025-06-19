@@ -23,7 +23,7 @@ class _CustomGoogleMapState extends State<CustomGoogleMap> {
       zoom: 10,
     );
     location = Location();
-    checkAndRequestLocationServices();
+    updateMyLocation();
     super.initState();
   }
 
@@ -57,7 +57,7 @@ class _CustomGoogleMapState extends State<CustomGoogleMap> {
     }
   }
 
-  void checkAndRequestLocationServices() async {
+  Future<void> checkAndRequestLocationServices() async {
     bool isServiceEnabled = await location.serviceEnabled();
     if (!isServiceEnabled) {
       isServiceEnabled = await location.requestService();
@@ -65,17 +65,36 @@ class _CustomGoogleMapState extends State<CustomGoogleMap> {
         // TODO: show error bar
       }
     }
-    checkAndRequestLocationPermission();
   }
 
-  void checkAndRequestLocationPermission() async {
+  Future<bool> checkAndRequestLocationPermission() async {
     var permissionStatus = await location.hasPermission();
+
+    if (permissionStatus == PermissionStatus.deniedForever) {
+      return false;
+    }
+
     if (permissionStatus == PermissionStatus.denied) {
       permissionStatus = await location.requestPermission();
-
       if (permissionStatus != PermissionStatus.granted) {
-        // TODO: show error bar
+        return false;
       }
+    }
+
+    return true;
+  }
+
+  void getLocationData() async {
+    location.onLocationChanged.listen((locationData) {});
+  }
+
+  void updateMyLocation() async {
+    await checkAndRequestLocationServices();
+    var hasPermissionStatus = await checkAndRequestLocationPermission();
+    if (hasPermissionStatus) {
+      getLocationData();
+    } else {
+      // TODO: show error bar
     }
   }
 }
